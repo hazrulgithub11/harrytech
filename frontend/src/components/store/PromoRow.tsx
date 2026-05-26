@@ -1,5 +1,5 @@
-import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, useInView, useReducedMotion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { promoCards, type PromoCard } from '@/data/products'
 
@@ -102,6 +102,36 @@ function PromoCardItem({ card, index }: { card: PromoCard; index: number }) {
 export function PromoRow() {
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
+  const trackRef = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
+  const [loopDistance, setLoopDistance] = useState(0)
+
+  const mobileCards = useMemo(() => [...promoCards, ...promoCards], [])
+
+  useEffect(() => {
+    if (!trackRef.current) return
+
+    const track = trackRef.current
+
+    const measure = () => {
+      // Two identical sets are rendered; loop by exactly half the scroll width.
+      const half = Math.max(0, Math.floor(track.scrollWidth / 2))
+      setLoopDistance(half)
+    }
+
+    measure()
+
+    const ro = new ResizeObserver(() => measure())
+    ro.observe(track)
+
+    // Images can affect intrinsic sizes after first paint.
+    const t = window.setTimeout(measure, 150)
+
+    return () => {
+      window.clearTimeout(t)
+      ro.disconnect()
+    }
+  }, [])
 
   return (
     <section ref={ref} className="py-12 bg-warm-base">
@@ -122,8 +152,58 @@ export function PromoRow() {
           </a>
         </motion.div>
 
-        {/* Asymmetric grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Mobile: auto-sliding carousel */}
+        <div className="sm:hidden">
+          <div className="relative -mx-4 px-4 overflow-hidden">
+            <motion.div
+              ref={trackRef}
+              className="flex gap-4 w-max pr-8"
+              drag={reduceMotion ? false : 'x'}
+              dragConstraints={{ left: -Math.max(0, loopDistance), right: 0 }}
+              dragElastic={0.08}
+              animate={
+                reduceMotion || loopDistance === 0
+                  ? undefined
+                  : {
+                      x: [0, -loopDistance],
+                    }
+              }
+              transition={
+                reduceMotion || loopDistance === 0
+                  ? undefined
+                  : {
+                      duration: Math.max(12, loopDistance / 55),
+                      ease: 'linear',
+                      repeat: Infinity,
+                      repeatType: 'loop',
+                    }
+              }
+            >
+              {mobileCards.map((card, i) => (
+                <div
+                  key={`${card.id}-${i}`}
+                  className={[
+                    'shrink-0',
+                    // varied widths so it feels less "template"
+                    i % 4 === 0 ? 'w-[82vw] max-w-[360px]' : '',
+                    i % 4 === 1 ? 'w-[72vw] max-w-[320px]' : '',
+                    i % 4 === 2 ? 'w-[78vw] max-w-[340px]' : '',
+                    i % 4 === 3 ? 'w-[68vw] max-w-[300px]' : '',
+                  ].join(' ')}
+                >
+                  <PromoCardItem card={card} index={i % promoCards.length} />
+                </div>
+              ))}
+            </motion.div>
+
+            {/* soft edge fades */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-warm-base to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-warm-base to-transparent" />
+          </div>
+        </div>
+
+        {/* sm+: Asymmetric grid */}
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Large card spans 2 on lg */}
           <div className="lg:col-span-2">
             <PromoCardItem card={promoCards[0]} index={0} />

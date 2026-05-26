@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Star, Quote } from 'lucide-react'
 
@@ -51,6 +51,43 @@ function StarRating({ count }: { count: number }) {
 export function Testimonials() {
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [userPaused, setUserPaused] = useState(false)
+
+  const reduceMotion = useMemo(() => {
+    if (typeof window === 'undefined') return true
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
+  }, [])
+
+  useEffect(() => {
+    if (reduceMotion) return
+    if (!inView) return
+    if (userPaused) return
+
+    const el = scrollerRef.current
+    if (!el) return
+
+    const id = window.setInterval(() => {
+      setActiveIndex((i) => (i + 1) % testimonials.length)
+    }, 4200)
+
+    return () => window.clearInterval(id)
+  }, [inView, reduceMotion, userPaused])
+
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    // Important: avoid `scrollIntoView` because it can scroll the page vertically.
+    // We only want to move the horizontal carousel.
+    if (el.scrollWidth <= el.clientWidth) return
+
+    const target = el.querySelector<HTMLElement>(`[data-slide="${activeIndex}"]`)
+    if (!target) return
+
+    const left = Math.max(0, target.offsetLeft - 16)
+    el.scrollTo({ left, behavior: reduceMotion ? 'auto' : 'smooth' })
+  }, [activeIndex, reduceMotion])
 
   return (
     <section ref={ref} className="py-20 bg-warm-base relative overflow-hidden">
@@ -73,66 +110,79 @@ export function Testimonials() {
           </p>
         </motion.div>
 
-        {/* Cards — staggered vertically */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 items-start">
-          {testimonials.map((t, i) => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, y: 36 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.1 + i * 0.15, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              className={`${offsets[i]}`}
-            >
-              <div className="bg-white rounded-3xl border border-warm-border p-6 flex flex-col gap-4 hover:shadow-lg hover:shadow-charcoal/6 transition-shadow duration-300">
-                {/* Quote icon */}
-                <Quote size={20} className="text-teal opacity-60" />
+        {/* Cards — auto-sliding on mobile, staggered grid on sm+ */}
+        <div className="relative">
+          <div
+            ref={scrollerRef}
+            className="flex gap-5 overflow-x-auto pb-2 -mx-4 px-4 scroll-px-4 snap-x snap-mandatory sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:items-start sm:overflow-visible sm:snap-none"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            onPointerDown={() => setUserPaused(true)}
+            onPointerUp={() => setUserPaused(false)}
+            onPointerCancel={() => setUserPaused(false)}
+            onPointerLeave={() => setUserPaused(false)}
+            onMouseEnter={() => setUserPaused(true)}
+            onMouseLeave={() => setUserPaused(false)}
+            onTouchStart={() => setUserPaused(true)}
+            onTouchEnd={() => setUserPaused(false)}
+          >
+            {testimonials.map((t, i) => (
+              <motion.div
+                key={t.id}
+                data-slide={i}
+                initial={{ opacity: 0, y: 36 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.1 + i * 0.15, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                className={`snap-center shrink-0 w-[86%] sm:w-auto ${offsets[i]}`}
+              >
+                <div className="bg-white rounded-3xl border border-warm-border p-6 flex flex-col gap-4 hover:shadow-lg hover:shadow-charcoal/6 transition-shadow duration-300">
+                  {/* Quote icon */}
+                  <Quote size={20} className="text-teal opacity-60" />
 
-                {/* Stars */}
-                <StarRating count={t.rating} />
+                  {/* Stars */}
+                  <StarRating count={t.rating} />
 
-                {/* Text */}
-                <p className="font-body text-sm text-charcoal/75 leading-relaxed flex-1">
-                  "{t.text}"
-                </p>
+                  {/* Text */}
+                  <p className="font-body text-sm text-charcoal/75 leading-relaxed flex-1">
+                    "{t.text}"
+                  </p>
 
-                {/* Model purchased */}
-                <div className="px-2.5 py-1.5 bg-teal-light rounded-lg inline-flex self-start">
-                  <span className="text-xs font-sans font-medium text-teal-dark">{t.model}</span>
-                </div>
-
-                {/* Author */}
-                <div className="flex items-center gap-3 border-t border-warm-border pt-4">
-                  <div className="w-9 h-9 rounded-full bg-charcoal flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-display text-sm">{t.avatar}</span>
+                  {/* Model purchased */}
+                  <div className="px-2.5 py-1.5 bg-teal-light rounded-lg inline-flex self-start">
+                    <span className="text-xs font-sans font-medium text-teal-dark">{t.model}</span>
                   </div>
-                  <div>
-                    <div className="font-sans font-semibold text-charcoal text-sm leading-none">{t.name}</div>
-                    <div className="font-body text-xs text-muted-foreground mt-0.5">{t.location}</div>
+
+                  {/* Author */}
+                  <div className="flex items-center gap-3 border-t border-warm-border pt-4">
+                    <div className="w-9 h-9 rounded-full bg-charcoal flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-display text-sm">{t.avatar}</span>
+                    </div>
+                    <div>
+                      <div className="font-sans font-semibold text-charcoal text-sm leading-none">{t.name}</div>
+                      <div className="font-body text-xs text-muted-foreground mt-0.5">{t.location}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Subtle progress dots (mobile only) */}
+          <div className="mt-5 flex items-center gap-2 sm:hidden">
+            {testimonials.map((t, i) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-label={`Go to testimonial ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === activeIndex ? 'w-7 bg-charcoal/70' : 'w-3 bg-charcoal/20'
+                }`}
+                onClick={() => setActiveIndex(i)}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Trust summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.55, duration: 0.5 }}
-          className="mt-12 flex flex-wrap items-center justify-center gap-6 text-center"
-        >
-          {[
-            { val: '4.9', label: 'Average rating' },
-            { val: '500+', label: 'Verified buyers' },
-            { val: '98%', label: 'Would recommend' },
-          ].map((item) => (
-            <div key={item.label} className="px-6 py-3 rounded-2xl bg-white border border-warm-border">
-              <div className="font-display text-2xl text-charcoal">{item.val}</div>
-              <div className="font-body text-xs text-muted-foreground mt-0.5">{item.label}</div>
-            </div>
-          ))}
-        </motion.div>
+        
       </div>
     </section>
   )

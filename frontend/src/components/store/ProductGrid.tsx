@@ -73,16 +73,10 @@ export function ProductGrid() {
           </div>
         </motion.div>
 
-        {/* Staggered product grid — intentionally asymmetric */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Product grid — symmetric */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-4 sm:gap-x-5 sm:gap-y-6 items-stretch">
           {filtered.map((product, i) => (
-            <div
-              key={product.id}
-              className={
-                // Offset every 3rd card down slightly on lg
-                i % 3 === 1 ? 'lg:mt-8' : i % 3 === 2 ? 'lg:mt-4' : ''
-              }
-            >
+            <div key={product.id} className="h-full">
               <ProductCard product={product} index={i} />
             </div>
           ))}

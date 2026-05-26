@@ -66,16 +66,22 @@ export function TrustSteps() {
 
           {steps.map((step, i) => {
             const Icon = step.icon
+            const isRight = i % 2 === 1
             return (
               <motion.div
                 key={step.num}
                 initial={{ opacity: 0, y: 32 }}
                 animate={inView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: 0.1 + i * 0.15, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                className="relative flex flex-col items-start lg:items-center px-0 lg:px-6 pb-10 lg:pb-0"
+                className={[
+                  'relative flex flex-col w-full max-w-[520px] mx-auto px-6 lg:px-6 pb-10 lg:pb-0',
+                  // Mobile: alternate left/right. Sm+ uses the grid layout as before.
+                  isRight ? 'items-end text-right' : 'items-start text-left',
+                  'sm:max-w-none sm:mx-0 sm:px-0 sm:items-start sm:text-left lg:items-center lg:text-center',
+                ].join(' ')}
               >
                 {/* Step number — bleed behind icon */}
-                <div className="relative mb-4">
+                <div className={['relative mb-4', isRight ? 'ml-auto' : 'mr-auto', 'sm:mx-0'].join(' ')}>
                   {/* Large bg number */}
                   <span className="absolute -top-3 -left-2 font-display text-6xl text-white/5 select-none leading-none pointer-events-none">
                     {step.num}
@@ -93,9 +99,15 @@ export function TrustSteps() {
                   </div>
                 )}
 
-                <div className="lg:text-center">
+                <div className={['w-full', 'lg:text-center'].join(' ')}>
                   <h3 className="font-display text-xl text-white mb-2">{step.title}</h3>
-                  <p className="font-body text-sm text-white/50 leading-relaxed max-w-[220px] lg:max-w-none">
+                  <p
+                    className={[
+                      'font-body text-sm text-white/50 leading-relaxed max-w-[220px] lg:max-w-none',
+                      isRight ? 'ml-auto' : 'mr-auto',
+                      'sm:mx-0 lg:mx-auto',
+                    ].join(' ')}
+                  >
                     {step.desc}
                   </p>
                 </div>
@@ -104,25 +116,7 @@ export function TrustSteps() {
           })}
         </div>
 
-        {/* Trust numbers */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4"
-        >
-          {[
-            { val: '50+', label: 'Checkpoint tests' },
-            { val: '3mo', label: 'Warranty included' },
-            { val: '7-day', label: 'Return window (Grade A)' },
-            { val: '98%', label: 'Customer satisfaction' },
-          ].map((item) => (
-            <div key={item.label} className="rounded-2xl bg-white/5 border border-white/8 px-5 py-4">
-              <div className="font-display text-2xl text-teal mb-1">{item.val}</div>
-              <div className="font-body text-xs text-white/50">{item.label}</div>
-            </div>
-          ))}
-        </motion.div>
+        
       </div>
     </section>
   )
